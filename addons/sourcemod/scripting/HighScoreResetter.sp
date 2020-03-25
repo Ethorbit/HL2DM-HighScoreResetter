@@ -10,6 +10,7 @@ public Plugin:myinfo =
 
 #include <sdkhooks>
 ConVar MaxFragsConVar, AlertPlayersConVar;
+bool stopSpam = false;
 
 public void OnPluginStart()
 {
@@ -36,7 +37,9 @@ public Action:SRPlyDied(Event event, const char[] name, bool dontBroadcast)
     }
 
     int MaxAllowed = secHighPoints + GetConVarInt(MaxFragsConVar);
-    if (GetClientFrags(attacker) > MaxAllowed) // They are too good apparently :P
+    int Current = GetClientFrags(attacker) + 1;
+
+    if (Current >= MaxAllowed) // They are too good apparently :P
     {
         CreateTimer(0.3, ResetScore, attacker);
     }
@@ -44,19 +47,28 @@ public Action:SRPlyDied(Event event, const char[] name, bool dontBroadcast)
 
 public Action:ResetScore(Handle:timer, client)
 {
-    if (IsValidEntity(client))
+    if (stopSpam == false)
     {
-        if (GetConVarInt(AlertPlayersConVar) >= 1)
+        stopSpam = true;
+        if (IsValidEntity(client))
         {
-            char ClientName[32];
-            GetClientName(client, ClientName, 32);    
-            PrintToChatAll("%s's score was auto reset for having %i points above everyone else.", ClientName, GetConVarInt(MaxFragsConVar));
+            if (GetConVarInt(AlertPlayersConVar) >= 1)
+            {
+                char ClientName[32];
+                GetClientName(client, ClientName, 32);    
+                PrintToChatAll("%s's score was auto reset for having %i points above everyone else.", ClientName, GetConVarInt(MaxFragsConVar));
+            }
+            else
+            {
+                PrintToChat(client, "Your score was auto reset for having %i points above everyone else.", GetConVarInt(MaxFragsConVar));
+            }
+
+            SetEntProp(client, Prop_Data, "m_iFrags", 0);
+            stopSpam = false;
         }
         else
         {
-            PrintToChat(client, "Your score was auto reset for having %i points above everyone else.", GetConVarInt(MaxFragsConVar));
+            stopSpam = false;
         }
-
-        SetEntProp(client, Prop_Data, "m_iFrags", 0);
     }
 }
